@@ -29,6 +29,8 @@ def find_primitive_root(p):
 
 # To generate my public and private keys
 def generate_keys():
+    # TODO
+    # Need to change this to Pre-agreed Values
     # Step 1: Generate large prime number p and primitive root g
     p = generate_prime(100, 1000)  # Public prime number
     g = find_primitive_root(p)     # Public primitive root
