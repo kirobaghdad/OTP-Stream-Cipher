@@ -1,4 +1,24 @@
-import sys
+
+
+def right_rotate(x, n):
+    return ((x >> n) | (x << (32 - n))) & 0xFFFFFFFF
+
+def pad_message(message):
+    if isinstance(message, str):
+        message = message.encode('utf-8')
+        
+    length = len(message) * 8    # length in bits
+    message += b'\x80'
+    
+    while (len(message) * 8 + 64) % 512 != 0:
+        message += b'\x00'
+    
+    # adding the original length of the message
+    message += length.to_bytes(8, 'big')
+    
+    return message
+
+
 
 def sha256(message):
     H = [
@@ -20,25 +40,7 @@ def sha256(message):
             0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
         ]
     
-    def right_rotate(x, n):
-        return ((x >> n) | (x << (32 - n))) & 0xFFFFFFFF
-    
-    def pad_message(message):
-        if isinstance(message, str):
-            message = message.encode('utf-8')
-            
-        length = len(message) * 8    # length in bits
-        message += b'\x80'
-        
-        while (len(message) * 8 + 64) % 512 != 0:
-            message += b'\x00'
-        
-        # adding the original length of the message
-        message += length.to_bytes(8, 'big')
-        
-        return message
-    
-    
+
     message = pad_message(message)
     # divide the message into chunks
     chunks = [message[i:i+64] for i in range(0, len(message), 64)]
@@ -50,8 +52,7 @@ def sha256(message):
         for i in range(16):
             w[i] = int.from_bytes(chunk[i * 4 : i * 4 + 4], 'big')
             
-        # W(t) = σ₁(W(t - 2)) + W(t - 7) + σ₀(W(t - 15)) + W(t - 16)
-
+        # W(t) = σ₁(W(t - 2)) + W(t - 7) + σ₀(W(t - 15)) + W(t - 16) 
         for i in range(16, 64):
             s0 = right_rotate(w[i - 15], 7) ^ right_rotate(w[i - 15], 18) ^ (w[i - 15] >> 3)
             s1 = right_rotate(w[i - 2], 17) ^ right_rotate(w[i - 2], 19) ^ (w[i - 2] >> 10)
