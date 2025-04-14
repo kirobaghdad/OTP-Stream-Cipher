@@ -1,1 +1,0 @@
-Store parameters like LCG constants, key sizes, and algorithm choices.

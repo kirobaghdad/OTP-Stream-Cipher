@@ -1,0 +1,11 @@
+{
+  "LCG_params": {
+    "m": 2e31,
+    "a": 22695477,
+    "c": 1
+  },
+  "DH_params": {
+    "p_min_value": 100,
+    "p_max_value": 1000
+  }
+}

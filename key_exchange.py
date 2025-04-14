@@ -1,4 +1,5 @@
 import random
+import json
 
 def is_prime(n):
     if n < 2:
@@ -27,12 +28,41 @@ def find_primitive_root(p):
             return g
     return None
 
+def read_DH_params(file_path):
+    try:
+        # Open and read the JSON file
+        with open(file_path, 'r') as file:
+            params = json.load(file).get("DH_params")
+        
+        # Extract parameters
+        p_min_value = params.get('p_min_value')
+        p_max_value = params.get('p_max_value')
+
+        # Basic validation
+        if not all(isinstance(x, (int, float)) for x in [p_min_value, p_max_value]):
+            raise ValueError("All parameters must be numbers")
+        if p_min_value <= 0 or p_max_value <= 0:
+            raise ValueError("DH Params. must be positive")
+
+        return p_min_value, p_max_value
+
+    except FileNotFoundError:
+        print(f"Error: File '{file_path}' not found")
+        raise
+    except json.JSONDecodeError:
+        print(f"Error: File '{file_path}' contains invalid JSON")
+        raise
+    except KeyError as e:
+        print(f"Error: Missing parameter {e} in JSON file")
+        raise
+
+
 # To generate my public and private keys
 def generate_keys():
-    # TODO
-    # Need to change this to Pre-agreed Values
-    # Step 1: Generate large prime number p and primitive root g
-    p = generate_prime(100, 1000)  # Public prime number
+    # Get prime number p and primitive root g from config file
+    p_min_value, p_max_value = read_DH_params(file_path="config.json")
+    
+    p = generate_prime(min_value=p_min_value, max_value=p_max_value)  # Public prime number
     g = find_primitive_root(p)     # Public primitive root
     
     # Step 2: choose private keys
@@ -45,6 +75,9 @@ def generate_keys():
 
 # Exchanges the keys between the 2 servers
 def diffie_hellman():
+    # TODO
+    # need to send the public key to the other party
+    
 
     pass
 
