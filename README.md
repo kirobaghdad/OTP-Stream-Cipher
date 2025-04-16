@@ -16,7 +16,7 @@ The One-Time Pad (OTP) is a type of encryption that is theoretically unbreakable
 ## Features
 
 - Encrypt messages using OTP Stream Cipher
-- Decrypt messages using OTP Stream Cipher
+- Decrypt messages using OTP Stream Cipher4
 - Generate random keys for encryption
 
 ## Installation

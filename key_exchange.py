@@ -72,13 +72,3 @@ def generate_keys():
     my_public = pow(g, my_private, p)
 
     return my_private, my_public
-
-# Exchanges the keys between the 2 servers
-def diffie_hellman():
-    # TODO
-    # need to send the public key to the other party
-    
-
-    pass
-
-
