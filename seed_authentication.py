@@ -1,5 +1,3 @@
-
-
 def right_rotate(x, n):
     return ((x >> n) | (x << (32 - n))) & 0xFFFFFFFF
 

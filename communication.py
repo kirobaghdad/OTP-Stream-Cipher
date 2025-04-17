@@ -6,7 +6,7 @@ from seed_encryption import RSA
 from seed_authentication import hmac_sha256
 
 class CommunicationChannel:
-    def __init__(self, role,send_queue,recieve_queue):
+    def __init__(self, role,send_queue,recieve_queue,config_file="tests/config/config_1.json"):
         self.role = role
         self.timeout = 10  
         self.max_retries = 3
@@ -14,6 +14,7 @@ class CommunicationChannel:
         self.shared_secret = None
         self.send_queue = send_queue
         self.receive_queue = recieve_queue
+        self.config_file = config_file
 
     def wait_for_message(self, operation_name):
         retries = 0
@@ -40,11 +41,11 @@ class CommunicationChannel:
                 raise ConnectionError("Failed to receive receiver's rsa public key")
             rsa_public_key = result
             self.seed = random.getrandbits(32)
-            rsa = RSA(key_size=64)
+            rsa = RSA(key_size=64,config_file=self.config_file)
             encrypted_seed = rsa.encrypt(self.seed,rsa_public_key)
             self.send_queue.put(encrypted_seed)
         else:
-            rsa = RSA(key_size=64)
+            rsa = RSA(key_size=64,config_file=self.config_file)
             rsa.generate_keys()
             self.send_queue.put(rsa.get_public_key())
             result, success = self.wait_for_message("sender's seed key")

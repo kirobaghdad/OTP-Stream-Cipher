@@ -31,32 +31,33 @@ def read_lcg_params(file_path):
         raise
 
 def stream_cipher(plaintext, seed, is_encrypting=True):
-    # for every 10 chars return the encrypted or decrypted data
-    
-    # read LCG Params    
-    m, a, c = read_lcg_params("config.json")
-    chunk_size = 10 if is_encrypting else 20
+    m, a, c = read_lcg_params("tests/config/config_1.json")
+    lcg_gen = lcg(modulus=m, a=a, c=c, seed=seed)
+    if is_encrypting:
+        chunk_size = 10
+    else:
+        chunk_size = 20
     for i in range(0, len(plaintext), chunk_size):
         chunk = plaintext[i:i + chunk_size]
-        yield xor_encrypt_decrypt(chunk, next(lcg(modulus=m, a=a, c=c, seed=seed)), is_encrypting)
+        yield xor_encrypt_decrypt(chunk, lcg_gen, is_encrypting)
+
+def xor_encrypt_decrypt(plaintext, lcg_gen, is_encrypting):
+    if is_encrypting:
+        data_bytes = plaintext.encode('utf-8')
+    else:
+        data_bytes = bytes.fromhex(plaintext)
     
-def xor_encrypt_decrypt(plaintext, keystream_part, is_encrypting):
-    # Convert plaintext to bytes based on input type
-    try:
-        if is_encrypting:
-            data_bytes = plaintext.encode('utf-8')
-        else:
-            data_bytes = bytes.fromhex(plaintext)
-        
+    key_stream = b''
+    while len(key_stream) < len(data_bytes):
+        keystream_part = next(lcg_gen)
         key_bytes = int(keystream_part).to_bytes(max(4, (int(keystream_part).bit_length() + 7) // 8), byteorder='big')
-        
-        result = bytes([d ^ k for d, k in zip(data_bytes, key_bytes)])
-        
-        if is_encrypting:
-            return result.hex()
-        else:
-            return result.decode('utf-8')
-            
-    except Exception as e:
-        print(f"Error in {'encryption' if is_encrypting else 'decryption'}: {str(e)}")
-        raise
+        key_stream += key_bytes
+    
+    key_stream = key_stream[:len(data_bytes)]
+    
+    result = bytes([d ^ k for d, k in zip(data_bytes, key_stream)])
+    
+    if is_encrypting:
+        return result.hex()
+    else:
+        return result.decode('utf-8')

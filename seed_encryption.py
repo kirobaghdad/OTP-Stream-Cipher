@@ -38,7 +38,7 @@ def mod_inverse(e, phi):
     return x % phi
 
 class RSA:
-    def __init__(self, key_size = 128, config_file="config.json"):
+    def __init__(self, key_size = 128, config_file="tests/config/config_1.json"):
         self.key_size = key_size
         self.public_key = None
         self.private_key = None
