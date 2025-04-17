@@ -58,7 +58,6 @@ def main():
             print("[Main] Error: Communication timeout")
             return
             
-        
     except KeyboardInterrupt:
         print("\n[Main] Process interrupted by user")
     except Exception as e:

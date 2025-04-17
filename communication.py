@@ -65,7 +65,8 @@ class CommunicationChannel:
             
         hmac = hmac_sha256(cipher_text, str(self.seed))
         self.send_queue.put((cipher_text, hmac))
-        print(f"[{self.role}] sent message: {message} ")
+
+        print(f"[{self.role}] sent message: {message} encrypted message: {cipher_text}\n hmac: {hmac}")
         return True
 
     def receive_message(self):
@@ -81,12 +82,14 @@ class CommunicationChannel:
         calculated_hmac = hmac_sha256(cipher_text, str(self.seed))
         if calculated_hmac != received_hmac:
             raise ValueError("Message authentication failed")
-            
+        
+        encrypted_text = cipher_text
+        print(f"[{self.role}] received encrypted message: {encrypted_text}\n hmac: {received_hmac}")
         decrypted_text = ""
         for decrypted_chunk in stream_cipher(cipher_text, self.seed, is_encrypting=False):
             decrypted_text += decrypted_chunk
             
-        print(f"[{self.role}] received message: {decrypted_text} ")
+        print(f"[{self.role}] received decrypted message: {decrypted_text} ")
         return decrypted_text
 
     def close(self):
