@@ -44,7 +44,6 @@ class RSA:
         self.private_key = None
         self.n = None
         self.config_file = config_file
-        self.generate_keys()
 
     def read_params(self):
         try:
@@ -80,8 +79,9 @@ class RSA:
         print("RSA Public key: ", self.public_key)
         print("RSA Private key: ", self.private_key)
 
-    def encrypt(self, message):
-        e, n = self.public_key
+    def encrypt(self, message,public_key):
+        # e, n = self.public_key
+        e, n = public_key
         return pow(message, e, n)
 
     def decrypt(self, ciphertext):

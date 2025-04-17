@@ -35,38 +35,26 @@ def stream_cipher(plaintext, seed, is_encrypting=True):
     
     # read LCG Params    
     m, a, c = read_lcg_params("config.json")
-    if is_encrypting:
-        # For encryption, process the text in 10-character chunks
-        for i in range(0, len(plaintext), 10):
-            chunk = plaintext[i:i + 10]
-            yield xor_encrypt_decrypt(chunk, next(lcg(modulus=m, a=a, c=c, seed=seed)), True)
-    else:
-        # For decryption, process the hex string in 20-character chunks (10 bytes = 20 hex chars)
-        for i in range(0, len(plaintext), 20):
-            chunk = plaintext[i:i + 20]
-            yield xor_encrypt_decrypt(chunk, next(lcg(modulus=m, a=a, c=c, seed=seed)), False)
-
+    chunk_size = 10 if is_encrypting else 20
+    for i in range(0, len(plaintext), chunk_size):
+        chunk = plaintext[i:i + chunk_size]
+        yield xor_encrypt_decrypt(chunk, next(lcg(modulus=m, a=a, c=c, seed=seed)), is_encrypting)
+    
 def xor_encrypt_decrypt(plaintext, keystream_part, is_encrypting):
     # Convert plaintext to bytes based on input type
     try:
         if is_encrypting:
-            # For encryption, convert string to bytes
             data_bytes = plaintext.encode('utf-8')
         else:
-            # For decryption, convert hex string to bytes
             data_bytes = bytes.fromhex(plaintext)
         
-        # Convert keystream to bytes
         key_bytes = int(keystream_part).to_bytes(max(4, (int(keystream_part).bit_length() + 7) // 8), byteorder='big')
         
-        # Perform XOR operation
         result = bytes([d ^ k for d, k in zip(data_bytes, key_bytes)])
         
         if is_encrypting:
-            # For encryption, return hex string
             return result.hex()
         else:
-            # For decryption, return decoded string
             return result.decode('utf-8')
             
     except Exception as e:
