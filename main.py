@@ -24,7 +24,7 @@ def sender_process(send_queue,recieve_queue):
     except Exception as e:
         print(f"[Sender] Error: {str(e)}")
 
-def receiver_process(output_callback,send_queue,recieve_queue):
+def receiver_process(send_queue,recieve_queue):
     try:
         channel = CommunicationChannel('receiver',send_queue,recieve_queue)
         if not channel.establish_connection():
@@ -32,39 +32,32 @@ def receiver_process(output_callback,send_queue,recieve_queue):
             return
         decrypted_message = channel.receive_message()
         print("[Receiver] Message received and decrypted")
-        output_callback(decrypted_message)
+        with open('output.txt', 'w') as f:
+            f.write(decrypted_message)
         channel.close()
         
     except Exception as e:
         print(f"[Receiver] Error: {str(e)}")
-
-def write_output(message):
-    with open('output.txt', 'w') as f:
-        f.write(message)
-    print("[Main] Message written to output.txt")
 
 def main():
     print("Starting secure communication system...")
     sender_to_receiver_queue = queue.Queue()
     receiver_to_sender_queue = queue.Queue()
     sender = threading.Thread(target=sender_process, args=(sender_to_receiver_queue,receiver_to_sender_queue))
-    receiver = threading.Thread(target=receiver_process, args=(write_output,receiver_to_sender_queue,sender_to_receiver_queue))
+    receiver = threading.Thread(target=receiver_process, args=(receiver_to_sender_queue,sender_to_receiver_queue))
     
     try:
         sender.start()
         receiver.start()
         
-        # Wait for completion with timeout
-        timeout = 60  # 1 minute total timeout
+        timeout = 60 
         sender.join(timeout)
         receiver.join(timeout)
         
-        # Check for timeout
         if sender.is_alive() or receiver.is_alive():
             print("[Main] Error: Communication timeout")
             return
             
-        print("[Main] Communication completed successfully!")
         
     except KeyboardInterrupt:
         print("\n[Main] Process interrupted by user")
