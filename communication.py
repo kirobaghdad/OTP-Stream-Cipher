@@ -6,9 +6,9 @@ from seed_encryption import RSA
 from seed_authentication import hmac_sha256
 
 class CommunicationChannel:
-    def __init__(self, role,send_queue,recieve_queue,config_file="tests/config/config_1.json"):
+    def __init__(self, role,send_queue,recieve_queue,config_file):
         self.role = role
-        self.timeout = 10  
+        self.timeout = 10
         self.max_retries = 3
         self.seed = None
         self.shared_secret = None
@@ -27,8 +27,7 @@ class CommunicationChannel:
         return None, False
 
     def establish_connection(self):
-        print(f"[{self.role}] Initiating key exchange...")
-        private_key, public_key = generate_keys()
+        private_key, public_key = generate_keys(config_file=self.config_file)
         self.send_queue.put(public_key)
         result, success = self.wait_for_message("receiver's public key")
         if not success:
@@ -41,11 +40,11 @@ class CommunicationChannel:
                 raise ConnectionError("Failed to receive receiver's rsa public key")
             rsa_public_key = result
             self.seed = random.getrandbits(32)
-            rsa = RSA(key_size=64,config_file=self.config_file)
+            rsa = RSA(config_file=self.config_file)
             encrypted_seed = rsa.encrypt(self.seed,rsa_public_key)
             self.send_queue.put(encrypted_seed)
         else:
-            rsa = RSA(key_size=64,config_file=self.config_file)
+            rsa = RSA(config_file=self.config_file)
             rsa.generate_keys()
             self.send_queue.put(rsa.get_public_key())
             result, success = self.wait_for_message("sender's seed key")
@@ -61,7 +60,7 @@ class CommunicationChannel:
             raise ValueError("Secure connection not established")
             
         cipher_text = ""
-        for encrypted_chunk in stream_cipher(message, self.seed, is_encrypting=True):
+        for encrypted_chunk in stream_cipher(message, self.seed,self.config_file, is_encrypting=True):
             cipher_text += encrypted_chunk
             
         hmac = hmac_sha256(cipher_text, str(self.seed))
@@ -87,13 +86,12 @@ class CommunicationChannel:
         encrypted_text = cipher_text
         print(f"[{self.role}] received encrypted message: {encrypted_text}\n hmac: {received_hmac}")
         decrypted_text = ""
-        for decrypted_chunk in stream_cipher(cipher_text, self.seed, is_encrypting=False):
+        for decrypted_chunk in stream_cipher(cipher_text, self.seed,self.config_file, is_encrypting=False):
             decrypted_text += decrypted_chunk
             
         print(f"[{self.role}] received decrypted message: {decrypted_text} ")
         return decrypted_text
 
     def close(self):
-        """Close the communication channel"""
         self.send_queue.put(None)
         print(f"[{self.role}] thread finished successfully")

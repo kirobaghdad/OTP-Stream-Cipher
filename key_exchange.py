@@ -58,9 +58,9 @@ def read_DH_params(file_path):
 
 
 # To generate my public and private keys
-def generate_keys():
+def generate_keys(config_file):
     # Get prime number p and primitive root g from config file
-    p_min_value, p_max_value = read_DH_params(file_path="tests/config/config_1.json")
+    p_min_value, p_max_value = read_DH_params(config_file)
     
     p = generate_prime(min_value=p_min_value, max_value=p_max_value)  # Public prime number
     g = find_primitive_root(p)     # Public primitive root

@@ -38,8 +38,7 @@ def mod_inverse(e, phi):
     return x % phi
 
 class RSA:
-    def __init__(self, key_size = 128, config_file="tests/config/config_1.json"):
-        self.key_size = key_size
+    def __init__(self, config_file=None):
         self.public_key = None
         self.private_key = None
         self.n = None
@@ -49,6 +48,7 @@ class RSA:
         try:
             with open(self.config_file, 'r') as file:
                 params = json.load(file).get("RSA_params")
+            self.key_size = params.get('key_size')
             e = params.get('e')
             return e
         except FileNotFoundError:
@@ -59,6 +59,7 @@ class RSA:
             raise
 
     def generate_keys(self):
+        e = self.read_params()
         size = self.key_size // 2
         while True:
             p = generate_prime(size)
@@ -80,7 +81,6 @@ class RSA:
         print("RSA Private key: ", self.private_key)
 
     def encrypt(self, message,public_key):
-        # e, n = self.public_key
         e, n = public_key
         return pow(message, e, n)
 

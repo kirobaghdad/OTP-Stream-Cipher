@@ -34,5 +34,5 @@ pip install -r requirements.txt
 To excuete the modules run the following command:
 
 ```bash
-python  main.py --i "Your input file path" --o "Your output file path" -c "Your config file path"
+python  main.py --i "Your input file path" --o "Your output file path" --c "Your config file path"
 ```

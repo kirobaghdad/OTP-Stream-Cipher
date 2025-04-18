@@ -30,8 +30,8 @@ def read_lcg_params(file_path):
         print(f"Error: Missing parameter {e} in JSON file")
         raise
 
-def stream_cipher(plaintext, seed, is_encrypting=True):
-    m, a, c = read_lcg_params("tests/config/config_1.json")
+def stream_cipher(plaintext, seed,config_file, is_encrypting=True):
+    m, a, c = read_lcg_params(config_file)
     lcg_gen = lcg(modulus=m, a=a, c=c, seed=seed)
     if is_encrypting:
         chunk_size = 10
