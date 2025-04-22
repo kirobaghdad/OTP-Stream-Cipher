@@ -21,7 +21,6 @@ def generate_prime(min_value, max_value):
 
 # TODO
 def find_primitive_root(p):
-    """Find a primitive root modulo p"""
     for g in range(2, p):
         if all(pow(g, powers, p) != 1 
                for powers in range(1, p-1)):
@@ -57,14 +56,22 @@ def read_DH_params(file_path):
         raise
 
 
-# To generate my public and private keys
-def generate_keys(config_file):
-    # Get prime number p and primitive root g from config file
+def generate_DH_params(config_file=None):
+    # Step 1: Read parameters from the config file
     p_min_value, p_max_value = read_DH_params(config_file)
+
+    # Step 2: Generate a prime number p
+    p = generate_prime(p_min_value, p_max_value)
+
+    # Step 3: Find a primitive root g of p
+    g = find_primitive_root(p)
     
-    p = generate_prime(min_value=p_min_value, max_value=p_max_value)  # Public prime number
-    g = find_primitive_root(p)     # Public primitive root
-    
+    if g is None:
+        raise ValueError("Failed to find a primitive root for the prime number")
+
+    return p, g
+# To generate my public and private keys
+def generate_keys(p, g):
     # Step 2: choose private keys
     my_private = random.randint(1, p-1)  # My private key
     
@@ -72,3 +79,12 @@ def generate_keys(config_file):
     my_public = pow(g, my_private, p)
 
     return my_private, my_public
+
+def generate_shared_secret(other_public_key, my_private_key, p):
+    shared_secret = pow(other_public_key, my_private_key, p)
+    return shared_secret
+
+def encrypt_decrypt_message(message, shared_secret):
+    print(f"Shared secret: {shared_secret}, Message: {message}")
+    encrypted_message = message ^ shared_secret
+    return encrypted_message

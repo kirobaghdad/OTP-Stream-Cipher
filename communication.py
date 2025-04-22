@@ -1,20 +1,21 @@
 import queue
 import random
-from key_exchange import generate_keys
+from key_exchange import generate_keys, encrypt_decrypt_message, generate_shared_secret
 from stream_cipher import stream_cipher
-from seed_encryption import RSA
 from seed_authentication import hmac_sha256
 
 class CommunicationChannel:
-    def __init__(self, role,send_queue,recieve_queue,config_file):
+    def __init__(self, role,send_queue,receive_queue,p,g,config_file):
         self.role = role
         self.timeout = 10
         self.max_retries = 3
         self.seed = None
         self.shared_secret = None
-        self.send_queue = send_queue
-        self.receive_queue = recieve_queue
         self.config_file = config_file
+        self.send_queue = send_queue
+        self.receive_queue = receive_queue
+        self.p= p
+        self.g= g
 
     def wait_for_message(self, operation_name):
         retries = 0
@@ -27,31 +28,27 @@ class CommunicationChannel:
         return None, False
 
     def establish_connection(self):
-        private_key, public_key = generate_keys(config_file=self.config_file)
+        private_key, public_key= generate_keys(self.p,self.g)
         self.send_queue.put(public_key)
         result, success = self.wait_for_message("receiver's public key")
         if not success:
             raise ConnectionError("Failed to receive receiver's public key")
         other_public_key = result
+        self.shared_key = generate_shared_secret(other_public_key, private_key, self.p)
+        print(f"[{self.role}] Generated shared key: {self.shared_key}")
         
         if self.role == 'sender':
-            result, success = self.wait_for_message("receiver's rsa public key")
-            if not success:
-                raise ConnectionError("Failed to receive receiver's rsa public key")
-            rsa_public_key = result
             self.seed = random.getrandbits(32)
-            rsa = RSA(config_file=self.config_file)
-            encrypted_seed = rsa.encrypt(self.seed,rsa_public_key)
+            encrypted_seed = encrypt_decrypt_message(self.seed, self.shared_key)
+            print(f"[{self.role}] Generated seed: {self.seed}, Encrypted seed: {encrypted_seed}")
             self.send_queue.put(encrypted_seed)
         else:
-            rsa = RSA(config_file=self.config_file)
-            rsa.generate_keys()
-            self.send_queue.put(rsa.get_public_key())
             result, success = self.wait_for_message("sender's seed key")
             if not success:
                 raise ConnectionError("Failed to receive sender's seed key")
             encrypted_seed = result
-            self.seed = rsa.decrypt(encrypted_seed)
+            self.seed = encrypt_decrypt_message(encrypted_seed, self.shared_key)
+            print(f"[{self.role}] Received encrypted seed: {encrypted_seed}, Decrypted seed: {self.seed}")
         print(f"[{self.role}] Key exchange completed. Sent: {public_key}, Recieved: {other_public_key}, Seed: {self.seed}")
         return True
 
@@ -95,3 +92,4 @@ class CommunicationChannel:
     def close(self):
         self.send_queue.put(None)
         print(f"[{self.role}] thread finished successfully")
+

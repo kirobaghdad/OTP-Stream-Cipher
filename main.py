@@ -2,14 +2,15 @@ import sys
 import threading
 import queue
 from communication import CommunicationChannel
+from key_exchange import generate_DH_params
 
-def sender_process(send_queue,recieve_queue,config_file,input_file):
+def sender_process(send_queue,receive_queue,p,g,input_file,config_file):
     try:
         with open(input_file, 'r') as f:
             message = f.read()
             if not message:
                 raise ValueError("Input file is empty")
-        channel = CommunicationChannel('sender',send_queue,recieve_queue,config_file=config_file)
+        channel = CommunicationChannel('sender',send_queue,receive_queue,p,g,config_file)
         if not channel.establish_connection():
             print("[sender] Failed to establish connection")
             return
@@ -22,9 +23,9 @@ def sender_process(send_queue,recieve_queue,config_file,input_file):
     except Exception as e:
         print(f"[sender] Error: {str(e)}")
 
-def receiver_process(send_queue,recieve_queue,config_file,output_file):
+def receiver_process(send_queue,receive_queue,p,g,output_file,config_file):
     try:
-        channel = CommunicationChannel('receiver',send_queue,recieve_queue,config_file=config_file)
+        channel = CommunicationChannel('receiver',send_queue,receive_queue,p,g,config_file)
         if not channel.establish_connection():
             print("[receiver] Failed to establish connection")
             return
@@ -61,8 +62,9 @@ def main():
     print(f"[main] Config file: {config_file}")
     sender_to_receiver_queue = queue.Queue()
     receiver_to_sender_queue = queue.Queue()
-    sender = threading.Thread(target=sender_process, args=(sender_to_receiver_queue,receiver_to_sender_queue,config_file,input_file))
-    receiver = threading.Thread(target=receiver_process, args=(receiver_to_sender_queue,sender_to_receiver_queue,config_file,output_file))
+    p, g = generate_DH_params(config_file=config_file)
+    sender = threading.Thread(target=sender_process, args=(sender_to_receiver_queue,receiver_to_sender_queue,p,g,input_file,config_file))
+    receiver = threading.Thread(target=receiver_process, args=(receiver_to_sender_queue,sender_to_receiver_queue,p,g,output_file,config_file))
     
     try:
         sender.start()
