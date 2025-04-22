@@ -31,14 +31,8 @@ pip install -r requirements.txt
 
 ## Usage
 
-To encrypt a message, run the following command:
+To excuete the modules run the following command:
 
 ```bash
-python otp_cipher.py --encrypt --message "Your message here" --key "Your key here"
-```
-
-To decrypt a message, run the following command:
-
-```bash
-python otp_cipher.py --decrypt --message "Your encrypted message here" --key "Your key here"
+python  main.py --i "Your input file path" --o "Your output file path" --c "Your config file path"
 ```

@@ -58,9 +58,9 @@ def read_DH_params(file_path):
 
 
 # To generate my public and private keys
-def generate_keys():
+def generate_keys(config_file):
     # Get prime number p and primitive root g from config file
-    p_min_value, p_max_value = read_DH_params(file_path="config.json")
+    p_min_value, p_max_value = read_DH_params(config_file)
     
     p = generate_prime(min_value=p_min_value, max_value=p_max_value)  # Public prime number
     g = find_primitive_root(p)     # Public primitive root
@@ -72,13 +72,3 @@ def generate_keys():
     my_public = pow(g, my_private, p)
 
     return my_private, my_public
-
-# Exchanges the keys between the 2 servers
-def diffie_hellman():
-    # TODO
-    # need to send the public key to the other party
-    
-
-    pass
-
-

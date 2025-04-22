@@ -7,5 +7,9 @@
   "DH_params": {
     "p_min_value": 100,
     "p_max_value": 1000
+  },
+  "RSA_params": {
+    "e": 65537,
+    "key_size": 32
   }
 }
