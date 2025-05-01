@@ -19,57 +19,41 @@ def generate_prime(min_value, max_value):
     
     return prime
 
-# TODO
-def find_primitive_root(p):
-    for g in range(2, p):
-        if all(pow(g, powers, p) != 1 
-               for powers in range(1, p-1)):
-            return g
-    return None
 
-def read_DH_params(file_path):
+def read_DH_params(config_file):
     try:
         # Open and read the JSON file
-        with open(file_path, 'r') as file:
+        with open(config_file, 'r') as file:
             params = json.load(file).get("DH_params")
         
         # Extract parameters
-        p_min_value = params.get('p_min_value')
-        p_max_value = params.get('p_max_value')
-
+        p_hex_strings  = params.get('p_value')
+        g_hex_strings = params.get("g_value")
+        p_hex_bytes = [int(h, 16) for h in p_hex_strings]
+        g_hex_bytes = [int(h, 16) for h in g_hex_strings]
+        
+        p_value = int.from_bytes(p_hex_bytes, byteorder='big')
+        g_value = int.from_bytes(g_hex_bytes, byteorder='big')
+        
         # Basic validation
-        if not all(isinstance(x, (int, float)) for x in [p_min_value, p_max_value]):
-            raise ValueError("All parameters must be numbers")
-        if p_min_value <= 0 or p_max_value <= 0:
+        if not all(isinstance(x, (int, float)) for x in [p_value, g_value]):
+            raise ValueError("DH params. must be numbers")
+        
+        if p_value <= 0 or g_value <= 0:
             raise ValueError("DH Params. must be positive")
 
-        return p_min_value, p_max_value
+        return p_value, g_value
 
     except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found")
+        print(f"Error: File '{config_file}' not found")
         raise
     except json.JSONDecodeError:
-        print(f"Error: File '{file_path}' contains invalid JSON")
+        print(f"Error: File '{config_file}' contains invalid JSON")
         raise
     except KeyError as e:
         print(f"Error: Missing parameter {e} in JSON file")
         raise
 
-
-def generate_DH_params(config_file=None):
-    # Step 1: Read parameters from the config file
-    p_min_value, p_max_value = read_DH_params(config_file)
-
-    # Step 2: Generate a prime number p
-    p = generate_prime(p_min_value, p_max_value)
-
-    # Step 3: Find a primitive root g of p
-    g = find_primitive_root(p)
-    
-    if g is None:
-        raise ValueError("Failed to find a primitive root for the prime number")
-
-    return p, g
 # To generate my public and private keys
 def generate_keys(p, g):
     # Step 2: choose private keys

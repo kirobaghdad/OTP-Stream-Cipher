@@ -2,7 +2,7 @@ import sys
 import threading
 import queue
 from communication import CommunicationChannel
-from key_exchange import generate_DH_params
+from key_exchange import read_DH_params
 
 def sender_process(send_queue,receive_queue,p,g,input_file,config_file):
     try:
@@ -60,15 +60,18 @@ def main():
     print(f"[main] Input file: {input_file}")
     print(f"[main] Output file: {output_file}")
     print(f"[main] Config file: {config_file}")
+    
     sender_to_receiver_queue = queue.Queue()
     receiver_to_sender_queue = queue.Queue()
-    p, g = generate_DH_params(config_file=config_file)
+    
+    p, g = read_DH_params(config_file=config_file)
+    
     sender = threading.Thread(target=sender_process, args=(sender_to_receiver_queue,receiver_to_sender_queue,p,g,input_file,config_file))
     receiver = threading.Thread(target=receiver_process, args=(receiver_to_sender_queue,sender_to_receiver_queue,p,g,output_file,config_file))
     
     try:
-        sender.start()
         receiver.start()
+        sender.start()
         
         timeout = 60
         sender.join(timeout)

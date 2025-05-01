@@ -1,3 +1,4 @@
+import math
 import queue
 import random
 from key_exchange import generate_keys, encrypt_decrypt_message, generate_shared_secret
@@ -56,38 +57,74 @@ class CommunicationChannel:
         if not self.seed:
             raise ValueError("Secure connection not established")
             
+            
+        #send message length at first 
+        self.send_queue.put(len(message))
+        
         cipher_text = ""
+        
         for encrypted_chunk in stream_cipher(message, self.seed,self.config_file, is_encrypting=True):
             cipher_text += encrypted_chunk
+            self.send_queue.put(encrypted_chunk)
             
         hmac = hmac_sha256(cipher_text, str(self.seed))
-        self.send_queue.put((cipher_text, hmac))
+        
+        temp = len(hmac)
+        for i in range(0, temp, 20):
+            self.send_queue.put(hmac[i:i + 20])
 
         print(f"[{self.role}] sent message: {message} encrypted message: {cipher_text}\n hmac: {hmac}")
         return True
+
 
     def receive_message(self):
         if not self.seed:
             raise ValueError("Secure connection not established")
             
-        result, success = self.wait_for_message("encrypted message")
-        if not success:
-            raise ConnectionError("Failed to receive message")
-            
-        cipher_text, received_hmac = result
+        # receive length 
+        message_length, success = self.wait_for_message("message length")
         
-        calculated_hmac = hmac_sha256(cipher_text, str(self.seed))
+        if not success:
+            raise ConnectionError("Failed to receive message length")
+        
+        encrypted_text = ""
+        
+        # receive each 10 chars
+        for _ in range(math.ceil(message_length / 10)):            
+            result, success = self.wait_for_message("encrypted chunk")
+            
+            if not success:
+                raise ConnectionError("Failed to receive message chunk")
+        
+            encrypted_text += result
+            
+        received_hmac = ""
+        
+        # receive hmac
+        for _ in range(math.ceil((256) / (10 * 8))):            
+            result, success = self.wait_for_message("HMAC chunk")
+            
+            if not success:
+                raise ConnectionError("Failed to receive HMAC chunk")
+        
+            received_hmac += result
+            
+        
+        calculated_hmac = hmac_sha256(encrypted_text, str(self.seed))
+        
         if calculated_hmac != received_hmac:
             raise ValueError("Message authentication failed")
         
-        encrypted_text = cipher_text
         print(f"[{self.role}] received encrypted message: {encrypted_text}\n hmac: {received_hmac}")
+        
         decrypted_text = ""
-        for decrypted_chunk in stream_cipher(cipher_text, self.seed,self.config_file, is_encrypting=False):
+        
+        for decrypted_chunk in stream_cipher(encrypted_text, self.seed,self.config_file, is_encrypting=False):
             decrypted_text += decrypted_chunk
             
         print(f"[{self.role}] received decrypted message: {decrypted_text} ")
         return decrypted_text
+
 
     def close(self):
         self.send_queue.put(None)
