@@ -1,6 +1,8 @@
 import sys
 import threading
 import queue
+
+from colorama import Fore
 from communication import CommunicationChannel
 from key_exchange import read_DH_params
 
@@ -10,24 +12,24 @@ def sender_process(send_queue,receive_queue,p,g,input_file,config_file):
             message = f.read()
             if not message:
                 raise ValueError("Input file is empty")
-        channel = CommunicationChannel('sender',send_queue,receive_queue,p,g,config_file)
+        channel = CommunicationChannel('sender',send_queue,receive_queue,p,g,config_file, Fore.BLUE)
         if not channel.establish_connection():
-            print("[sender] Failed to establish connection")
+            print(Fore.RED + "[sender] Failed to establish connection")
             return
         if channel.send_message(message):
-            print("[sender] Successful message transmission")
+            print(Fore.BLUE + "[sender] Successful message transmission")
         channel.close()
         
     except FileNotFoundError:
         raise FileNotFoundError(f"[sender] Input file {input_file} not found")
     except Exception as e:
-        print(f"[sender] Error: {str(e)}")
+        print(Fore.RED + f"[sender] Error: {str(e)}")
 
 def receiver_process(send_queue,receive_queue,p,g,output_file,config_file):
     try:
-        channel = CommunicationChannel('receiver',send_queue,receive_queue,p,g,config_file)
+        channel = CommunicationChannel('receiver',send_queue,receive_queue,p,g,config_file, Fore.YELLOW)
         if not channel.establish_connection():
-            print("[receiver] Failed to establish connection")
+            print(Fore.RED + "[receiver] Failed to establish connection")
             return
         decrypted_message = channel.receive_message()
         with open(output_file, 'w') as f:
@@ -35,10 +37,11 @@ def receiver_process(send_queue,receive_queue,p,g,output_file,config_file):
         channel.close()
         
     except Exception as e:
-        print(f"[receiver] Error: {str(e)}")
+        print(Fore.RED + f"[receiver] Error: {str(e)}")
 
 def main():
     args = sys.argv[1:]
+    print(Fore.WHITE)
     print(args)
     input_file = 'tests/input/default_in.txt'
     output_file = 'tests/output/default_out.txt'
@@ -57,9 +60,9 @@ def main():
             i += 2
         else:
             i += 1
-    print(f"[main] Input file: {input_file}")
-    print(f"[main] Output file: {output_file}")
-    print(f"[main] Config file: {config_file}")
+    print(Fore.WHITE + f"[main] Input file: {input_file}")
+    print(Fore.WHITE + f"[main] Output file: {output_file}")
+    print(Fore.WHITE + f"[main] Config file: {config_file}")
     
     sender_to_receiver_queue = queue.Queue()
     receiver_to_sender_queue = queue.Queue()
@@ -78,13 +81,13 @@ def main():
         receiver.join(timeout)
         
         if sender.is_alive() or receiver.is_alive():
-            print("[main] Error: Communication timeout")
+            print(Fore.RED + "[main] Error: Communication timeout")
             return
             
     except KeyboardInterrupt:
-        print("\n[main] Process interrupted by user")
+        print(Fore.RED + "\n[main] Process interrupted by user")
     except Exception as e:
-        print(f"[main] Error: {str(e)}")
+        print(Fore.RED + f"[main] Error: {str(e)}")
 
 if __name__ == "__main__":
     main()

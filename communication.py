@@ -4,9 +4,10 @@ import random
 from key_exchange import generate_keys, encrypt_decrypt_message, generate_shared_secret
 from stream_cipher import stream_cipher
 from seed_authentication import hmac_sha256
+from colorama import Fore,Style, init
 
 class CommunicationChannel:
-    def __init__(self, role,send_queue,receive_queue,p,g,config_file):
+    def __init__(self, role,send_queue,receive_queue,p,g,config_file, text_color):
         self.role = role
         self.timeout = 10
         self.max_retries = 3
@@ -17,6 +18,7 @@ class CommunicationChannel:
         self.receive_queue = receive_queue
         self.p= p
         self.g= g
+        self.text_color = text_color
 
     def wait_for_message(self, operation_name):
         retries = 0
@@ -25,7 +27,9 @@ class CommunicationChannel:
                 return self.receive_queue.get(timeout=self.timeout), True
             except queue.Empty:
                 retries += 1
-                print(f"[{self.role}] Timeout waiting for {operation_name}. Retry {retries}/{self.max_retries}")
+                
+                print(Fore.RED + f"[{self.role}] Timeout waiting for {operation_name}. Retry {retries}/{self.max_retries}")
+                
         return None, False
 
     def establish_connection(self):
@@ -36,21 +40,23 @@ class CommunicationChannel:
             raise ConnectionError("Failed to receive receiver's public key")
         other_public_key = result
         self.shared_key = generate_shared_secret(other_public_key, private_key, self.p)
-        print(f"[{self.role}] Generated shared key: {self.shared_key}")
+        print(self.text_color + f"[{self.role}] Generated shared key: {self.shared_key}")
         
         if self.role == 'sender':
             self.seed = random.getrandbits(32)
-            encrypted_seed = encrypt_decrypt_message(self.seed, self.shared_key)
-            print(f"[{self.role}] Generated seed: {self.seed}, Encrypted seed: {encrypted_seed}")
+            print(self.text_color + "[sender] ", end='')
+            encrypted_seed = encrypt_decrypt_message(self.seed, self.shared_key, self.text_color)
+            print(self.text_color + f"[{self.role}] Generated seed: {self.seed}, Encrypted seed: {encrypted_seed}")
             self.send_queue.put(encrypted_seed)
         else:
             result, success = self.wait_for_message("sender's seed key")
             if not success:
                 raise ConnectionError("Failed to receive sender's seed key")
             encrypted_seed = result
-            self.seed = encrypt_decrypt_message(encrypted_seed, self.shared_key)
-            print(f"[{self.role}] Received encrypted seed: {encrypted_seed}, Decrypted seed: {self.seed}")
-        print(f"[{self.role}] Key exchange completed. Sent: {public_key}, Recieved: {other_public_key}, Seed: {self.seed}")
+            print(self.text_color + "[receiver] ", end='')
+            self.seed = encrypt_decrypt_message(encrypted_seed, self.shared_key, self.text_color)
+            print(self.text_color + f"[{self.role}] Received encrypted seed: {encrypted_seed}, Decrypted seed: {self.seed}")
+        print(self.text_color + f"[{self.role}] Key exchange completed. Sent: {public_key}, Received: {other_public_key}, Seed: {self.seed}")
         return True
 
     def send_message(self, message):
@@ -73,7 +79,7 @@ class CommunicationChannel:
         for i in range(0, temp, 20):
             self.send_queue.put(hmac[i:i + 20])
 
-        print(f"[{self.role}] sent message: {message} encrypted message: {cipher_text}\n hmac: {hmac}")
+        print(self.text_color + f"[{self.role}] sent message: {message} \nencrypted message: {cipher_text}\nhmac: {hmac}")
         return True
 
 
@@ -115,18 +121,18 @@ class CommunicationChannel:
         if calculated_hmac != received_hmac:
             raise ValueError("Message authentication failed")
         
-        print(f"[{self.role}] received encrypted message: {encrypted_text}\n hmac: {received_hmac}")
+        print(self.text_color + f"[{self.role}] received encrypted message: {encrypted_text}\nhmac: {received_hmac}")
         
         decrypted_text = ""
         
         for decrypted_chunk in stream_cipher(encrypted_text, self.seed,self.config_file, is_encrypting=False):
             decrypted_text += decrypted_chunk
             
-        print(f"[{self.role}] received decrypted message: {decrypted_text} ")
+        print(self.text_color + f"[{self.role}] received decrypted message: {decrypted_text} ")
         return decrypted_text
 
 
     def close(self):
         self.send_queue.put(None)
-        print(f"[{self.role}] thread finished successfully")
+        print(Fore.WHITE + f"[{self.role}] thread finished successfully")
 

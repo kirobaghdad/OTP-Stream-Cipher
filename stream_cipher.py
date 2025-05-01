@@ -1,3 +1,4 @@
+from colorama import Fore
 from lcg import lcg
 import json
 
@@ -21,13 +22,13 @@ def read_lcg_params(file_path):
         return m, a, c
 
     except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found")
+        print(Fore.RED + f"Error: File '{file_path}' not found")
         raise
     except json.JSONDecodeError:
-        print(f"Error: File '{file_path}' contains invalid JSON")
+        print(Fore.RED + f"Error: File '{file_path}' contains invalid JSON")
         raise
     except KeyError as e:
-        print(f"Error: Missing parameter {e} in JSON file")
+        print(Fore.RED + f"Error: Missing parameter {e} in JSON file")
         raise
 
 def stream_cipher(plaintext, seed,config_file, is_encrypting=True):

@@ -1,6 +1,8 @@
 import random
 import json
 
+from colorama import Fore
+
 def is_prime(n):
     if n < 2:
         return False
@@ -45,13 +47,13 @@ def read_DH_params(config_file):
         return p_value, g_value
 
     except FileNotFoundError:
-        print(f"Error: File '{config_file}' not found")
+        print(Fore.RED + f"Error: File '{config_file}' not found")
         raise
     except json.JSONDecodeError:
-        print(f"Error: File '{config_file}' contains invalid JSON")
+        print(Fore.RED + f"Error: File '{config_file}' contains invalid JSON")
         raise
     except KeyError as e:
-        print(f"Error: Missing parameter {e} in JSON file")
+        print(Fore.RED + f"Error: Missing parameter {e} in JSON file")
         raise
 
 # To generate my public and private keys
@@ -68,7 +70,7 @@ def generate_shared_secret(other_public_key, my_private_key, p):
     shared_secret = pow(other_public_key, my_private_key, p)
     return shared_secret
 
-def encrypt_decrypt_message(message, shared_secret):
-    print(f"Shared secret: {shared_secret}, Message: {message}")
+def encrypt_decrypt_message(message, shared_secret, text_color):
+    print(text_color + f"Shared secret: {shared_secret}, Message: {message}")
     encrypted_message = message ^ shared_secret
     return encrypted_message
