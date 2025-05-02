@@ -36,9 +36,10 @@ class CommunicationChannel:
     def establish_connection(self):
         private_key, public_key= generate_keys(self.DH_params)
         self.send_queue.put(public_key)
-        result, success = self.wait_for_message("receiver's public key")
+        result, success = self.wait_for_message(f"{"receiver" if self.role == "sender" else "sender"}'s public key")
         if not success:
-            raise ConnectionError("Failed to receive receiver's public key")
+            raise ConnectionError(f"Failed to receive {"receiver" if self.role == "sender" else "sender"} public key")
+        
         other_public_key = result
         self.shared_key = generate_shared_secret(other_public_key, private_key, self.DH_params['p'])
         print(self.text_color + f"[{self.role}] Generated shared key: {self.shared_key}")
@@ -57,33 +58,38 @@ class CommunicationChannel:
             print(self.text_color + "[receiver] ", end='')
             self.seed = encrypt_decrypt_message(encrypted_seed, self.shared_key, self.text_color)
             print(self.text_color + f"[{self.role}] Received encrypted seed: {encrypted_seed}, Decrypted seed: {self.seed}")
+            
         print(self.text_color + f"[{self.role}] Key exchange completed. Sent: {public_key}, Received: {other_public_key}, Seed: {self.seed}")
         return True
 
     def send_message(self, message):
         if not self.seed:
             raise ValueError("Secure connection not established")
-            
-            
-        #send message length at first 
+        
+        import time  # Import time module for execution time measurement
+        start_time = time.time()  # Start the timer
+        
+        # Send message length at first 
         self.send_queue.put(len(message))
         
         cipher_text = ""
         
-        for encrypted_chunk in stream_cipher(message, self.seed,self.LCG_params,self.chunk_size, is_encrypting=True):
+        for encrypted_chunk in stream_cipher(message, self.seed, self.LCG_params, self.chunk_size, is_encrypting=True):
             cipher_text += encrypted_chunk
             self.send_queue.put(encrypted_chunk)
             
         hmac = hmac_sha256(cipher_text, str(self.shared_key))
         
         temp = len(hmac)
-        for i in range(0, temp, 2*self.chunk_size):
-            self.send_queue.put(hmac[i:i +2*self.chunk_size])
-
-        print(self.text_color + f"[{self.role}] sent message: {message} \nencrypted message: {cipher_text}\nhmac: {hmac}")
+        for i in range(0, temp, 2 * self.chunk_size):
+            self.send_queue.put(hmac[i:i + 2 * self.chunk_size])
+        
+        end_time = time.time()  # End the timer
+        execution_time = end_time - start_time  # Calculate execution time
+        
+        print(self.text_color + f"[{self.role}] sent message: {message} \nencrypted message: {cipher_text}\nhmac: {hmac}\n")
+        print(self.text_color + f"[{self.role}] Message sent in {execution_time:.4f} seconds")  # Display execution time
         return True
-
-
     def receive_message(self):
         if not self.seed:
             raise ValueError("Secure connection not established")
@@ -96,7 +102,7 @@ class CommunicationChannel:
         
         encrypted_text = ""
         
-        # receive each 10 chars
+        # receive each chunk_size chars
         for _ in range(math.ceil(message_length / self.chunk_size)):
             result, success = self.wait_for_message("encrypted chunk")
             
