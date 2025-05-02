@@ -7,18 +7,19 @@ from seed_authentication import hmac_sha256
 from colorama import Fore,Style, init
 
 class CommunicationChannel:
-    def __init__(self, role,send_queue,receive_queue,p,g,config_file, text_color):
+    def __init__(self, role,send_queue,receive_queue,LCG_params, DH_params, chunk_size, text_color):
         self.role = role
         self.timeout = 10
         self.max_retries = 3
         self.seed = None
         self.shared_secret = None
-        self.config_file = config_file
         self.send_queue = send_queue
         self.receive_queue = receive_queue
-        self.p= p
-        self.g= g
+        self.DH_params = DH_params
+        self.LCG_params = LCG_params
+        self.chunk_size = chunk_size
         self.text_color = text_color
+        self.chunk_size = chunk_size
 
     def wait_for_message(self, operation_name):
         retries = 0
@@ -33,13 +34,13 @@ class CommunicationChannel:
         return None, False
 
     def establish_connection(self):
-        private_key, public_key= generate_keys(self.p,self.g)
+        private_key, public_key= generate_keys(self.DH_params)
         self.send_queue.put(public_key)
         result, success = self.wait_for_message("receiver's public key")
         if not success:
             raise ConnectionError("Failed to receive receiver's public key")
         other_public_key = result
-        self.shared_key = generate_shared_secret(other_public_key, private_key, self.p)
+        self.shared_key = generate_shared_secret(other_public_key, private_key, self.DH_params['p'])
         print(self.text_color + f"[{self.role}] Generated shared key: {self.shared_key}")
         
         if self.role == 'sender':
@@ -69,15 +70,15 @@ class CommunicationChannel:
         
         cipher_text = ""
         
-        for encrypted_chunk in stream_cipher(message, self.seed,self.config_file, is_encrypting=True):
+        for encrypted_chunk in stream_cipher(message, self.seed,self.LCG_params,self.chunk_size, is_encrypting=True):
             cipher_text += encrypted_chunk
             self.send_queue.put(encrypted_chunk)
             
-        hmac = hmac_sha256(cipher_text, str(self.seed))
+        hmac = hmac_sha256(cipher_text, str(self.shared_key))
         
         temp = len(hmac)
-        for i in range(0, temp, 20):
-            self.send_queue.put(hmac[i:i + 20])
+        for i in range(0, temp, 2*self.chunk_size):
+            self.send_queue.put(hmac[i:i +2*self.chunk_size])
 
         print(self.text_color + f"[{self.role}] sent message: {message} \nencrypted message: {cipher_text}\nhmac: {hmac}")
         return True
@@ -96,7 +97,7 @@ class CommunicationChannel:
         encrypted_text = ""
         
         # receive each 10 chars
-        for _ in range(math.ceil(message_length / 10)):            
+        for _ in range(math.ceil(message_length / self.chunk_size)):
             result, success = self.wait_for_message("encrypted chunk")
             
             if not success:
@@ -107,7 +108,7 @@ class CommunicationChannel:
         received_hmac = ""
         
         # receive hmac
-        for _ in range(math.ceil((256) / (10 * 8))):            
+        for _ in range(math.ceil((256) / (self.chunk_size * 8))):            
             result, success = self.wait_for_message("HMAC chunk")
             
             if not success:
@@ -116,7 +117,7 @@ class CommunicationChannel:
             received_hmac += result
             
         
-        calculated_hmac = hmac_sha256(encrypted_text, str(self.seed))
+        calculated_hmac = hmac_sha256(encrypted_text, str(self.shared_key))
         
         if calculated_hmac != received_hmac:
             raise ValueError("Message authentication failed")
@@ -125,7 +126,7 @@ class CommunicationChannel:
         
         decrypted_text = ""
         
-        for decrypted_chunk in stream_cipher(encrypted_text, self.seed,self.config_file, is_encrypting=False):
+        for decrypted_chunk in stream_cipher(encrypted_text, self.seed,self.LCG_params,self.chunk_size, is_encrypting=False):
             decrypted_text += decrypted_chunk
             
         print(self.text_color + f"[{self.role}] received decrypted message: {decrypted_text} ")

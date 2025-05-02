@@ -2,16 +2,12 @@ from colorama import Fore
 from lcg import lcg
 import json
 
-def read_lcg_params(file_path):
+def read_lcg_params(LCG_params):
     try:
-        # Open and read the JSON file
-        with open(file_path, 'r') as file:
-            params = json.load(file).get("LCG_params")
-        
         # Extract parameters
-        m = params.get('m')
-        a = params.get('a')
-        c = params.get('c')
+        m = LCG_params.get('m')
+        a = LCG_params.get('a')
+        c = LCG_params.get('c')
 
         # Basic validation
         if not all(isinstance(x, (int, float)) for x in [m, a, c]):
@@ -21,23 +17,17 @@ def read_lcg_params(file_path):
 
         return m, a, c
 
-    except FileNotFoundError:
-        print(Fore.RED + f"Error: File '{file_path}' not found")
-        raise
-    except json.JSONDecodeError:
-        print(Fore.RED + f"Error: File '{file_path}' contains invalid JSON")
-        raise
     except KeyError as e:
-        print(Fore.RED + f"Error: Missing parameter {e} in JSON file")
+        print(Fore.RED + f"Error: Missing parameter {e} in LCG_params dictionary")
         raise
 
-def stream_cipher(plaintext, seed,config_file, is_encrypting=True):
-    m, a, c = read_lcg_params(config_file)
+def stream_cipher(plaintext, seed,LCG_params, chunk_size, is_encrypting=True):
+    m, a, c = read_lcg_params(LCG_params)
     lcg_gen = lcg(modulus=m, a=a, c=c, seed=seed)
     if is_encrypting:
-        chunk_size = 10
+        chunk_size = chunk_size 
     else:
-        chunk_size = 20
+        chunk_size = chunk_size * 2  # For decryption, we need to double the chunk size as we convert  it to hex
     for i in range(0, len(plaintext), chunk_size):
         chunk = plaintext[i:i + chunk_size]
         yield xor_encrypt_decrypt(chunk, lcg_gen, is_encrypting)
